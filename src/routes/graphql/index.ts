@@ -14,6 +14,7 @@ import {
   parse,
   GraphQLString,
   GraphQLBoolean,
+  GraphQLInputObjectType,
 } from 'graphql';
 import { PrismaClient } from '@prisma/client';
 import depthLimit from 'graphql-depth-limit';
@@ -95,9 +96,97 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         type: UUIDType,
         description: '',
       },
+
       memberTypeId: {
         type: MemberTypeId,
         description: '',
+      },
+
+      memberType: {
+        type: member,
+        description: '',
+        resolve: async ({ memberTypeId }) => {
+          const id = memberTypeId as string;
+          return await prisma.memberType.findUnique({
+            where: {
+              id,
+            },
+          });
+        },
+      },
+    }),
+  });
+
+  const user: GraphQLObjectType = new GraphQLObjectType({
+    name: 'user',
+    fields: () => ({
+      id: {
+        type: UUIDType,
+        description: '',
+      },
+      name: {
+        type: GraphQLString,
+        description: '',
+      },
+      balance: {
+        type: GraphQLFloat,
+        description: '',
+      },
+      profile: {
+        type: profile,
+        description: '',
+        resolve: async ({ id }) => {
+          const userId = id as string;
+          return await prisma.profile.findUnique({
+            where: {
+              userId,
+            },
+          });
+        },
+      },
+      posts: {
+        type: new GraphQLList(new GraphQLNonNull(post)),
+        description: '',
+        resolve: async ({ id }) => {
+          const authorId = id as string;
+          return await prisma.post.findMany({
+            where: {
+              authorId,
+            },
+          });
+        },
+      },
+      subscribedToUser: {
+        type: new GraphQLList(new GraphQLNonNull(user)),
+        description: '',
+        resolve: async ({ id }) => {
+          const authorId = id as string;
+          return prisma.user.findMany({
+            where: {
+              userSubscribedTo: {
+                some: {
+                  authorId,
+                },
+              },
+            },
+          });
+        },
+      },
+      userSubscribedTo: {
+        type: new GraphQLList(new GraphQLNonNull(user)),
+        description: '',
+        resolve: async ({ id }) => {
+          const subscriberId = id as string;
+          return prisma.user.findMany({
+            where: {
+              subscribedToUser: {
+                some: {
+                  subscriberId,
+                },
+              },
+            },
+          });
+        },
       },
     }),
   });
@@ -162,12 +251,142 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           });
         },
       },
+      users: {
+        type: new GraphQLList(new GraphQLNonNull(user)),
+        resolve: async () => {
+          return await prisma.user.findMany();
+        },
+      },
+      user: {
+        type: user,
+        args: { id: { type: UUIDType } },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const idNumber = id as string;
+          return await prisma.user.findUnique({
+            where: {
+              id: idNumber,
+            },
+          });
+        },
+      },
+    }),
+  });
+
+  const CreatePostInput = new GraphQLInputObjectType({
+    name: 'CreatePostInput',
+    fields: () => ({
+      title: {
+        type: GraphQLString,
+        description: '',
+      },
+      content: {
+        type: GraphQLString,
+        description: '',
+      },
+      authorId: {
+        type: UUIDType,
+        description: '',
+      },
+    }),
+  });
+
+  const CreateProfileInput = new GraphQLInputObjectType({
+    name: 'CreateProfileInput',
+    fields: () => ({
+      isMale: {
+        type: GraphQLBoolean,
+        description: '',
+      },
+      yearOfBirth: {
+        type: GraphQLInt,
+        description: '',
+      },
+      userId: {
+        type: UUIDType,
+        description: '',
+      },
+
+      memberTypeId: {
+        type: MemberTypeId,
+        description: '',
+      },
+    }),
+  });
+
+  const CreateUserInput = new GraphQLInputObjectType({
+    name: 'CreateUserInput',
+    fields: () => ({
+      name: {
+        type: GraphQLString,
+        description: '',
+      },
+      balance: {
+        type: GraphQLFloat,
+        description: '',
+      },
+    }),
+  });
+
+  const rootMutation = new GraphQLObjectType({
+    name: 'rootMutation',
+    fields: () => ({
+      createPost: {
+        type: post,
+        args: { dto: { type: new GraphQLNonNull(CreatePostInput) } },
+        resolve: async (_source, { dto }, context) => {
+          const prisma = context as PrismaClient;
+
+          const post = dto as {
+            title: string;
+            content: string;
+            authorId: string;
+          };
+
+          return await prisma.post.create({
+            data: post,
+          });
+        },
+      },
+
+      createProfile: {
+        type: profile,
+        args: { dto: { type: new GraphQLNonNull(CreateProfileInput) } },
+        resolve: async (_source, { dto }, context) => {
+          const prisma = context as PrismaClient;
+          const profile = dto as {
+            isMale: boolean;
+            yearOfBirth: number;
+            userId: string;
+            memberTypeId: string;
+          }
+          return await prisma.profile.create({
+            data: profile,
+          });
+        },
+      },
+      createUser: {
+        type: user,
+        args: { dto: { type: new GraphQLNonNull(CreateUserInput) } },
+        resolve: async (_source, { dto }, context) => {
+          const prisma = context as PrismaClient;
+          const user = dto as {
+            name: string;
+            balance: number;
+          }
+
+          return await prisma.user.create({
+            data: user,
+          });
+        },
+      },
     }),
   });
 
   const schema = new GraphQLSchema({
     query: rootQuery,
-    types: [member, MemberTypeId, post, profile],
+    mutation: rootMutation,
+    types: [member, MemberTypeId, post, profile, user, CreatePostInput, CreateProfileInput, CreateUserInput],
   });
 
   fastify.route({
