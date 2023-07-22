@@ -328,6 +328,52 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }),
   });
 
+  const ChangePostInput = new GraphQLInputObjectType({
+    name: 'ChangePostInput',
+    fields: () => ({
+      title: {
+        type: GraphQLString,
+        description: '',
+      },
+      content: {
+        type: GraphQLString,
+        description: '',
+      }
+    }),
+  });
+
+  const ChangeProfileInput = new GraphQLInputObjectType({
+    name: 'ChangeProfileInput',
+    fields: () => ({
+      isMale: {
+        type: GraphQLBoolean,
+        description: '',
+      },
+      yearOfBirth: {
+        type: GraphQLInt,
+        description: '',
+      },
+      memberTypeId: {
+        type: MemberTypeId,
+        description: '',
+      },
+    }),
+  });
+
+  const ChangeUserInput = new GraphQLInputObjectType({
+    name: 'ChangeUserInput',
+    fields: () => ({
+      name: {
+        type: GraphQLString,
+        description: '',
+      },
+      balance: {
+        type: GraphQLFloat,
+        description: '',
+      },
+    }),
+  });
+
   const rootMutation = new GraphQLObjectType({
     name: 'rootMutation',
     fields: () => ({
@@ -377,6 +423,61 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           }
 
           return await prisma.user.create({
+            data: user,
+          });
+        },
+      },
+
+      changePost: {
+        type: post,
+        args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangePostInput) } },
+        resolve: async (_source, { id, dto }, context) => {
+          const prisma = context as PrismaClient;
+
+          const postId = id as string;
+          const post = dto as {
+            title: string;
+            content: string;
+          };
+
+          return await prisma.post.update({
+            where: { id: postId },
+            data: post,
+          });
+        },
+      },
+
+      changeProfile: {
+        type: profile,
+        args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangeProfileInput) } },
+        resolve: async (_source, { id, dto }, context) => {
+          const prisma = context as PrismaClient;
+          const profileId = id as string;
+          const profile = dto as {
+            isMale: boolean;
+            yearOfBirth: number;
+            memberTypeId: string;
+          }
+          return await prisma.profile.update({
+            where: { id: profileId },
+            data: profile,
+          });
+        },
+      },
+
+      changeUser: {
+        type: user,
+        args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangeUserInput) } },
+        resolve: async (_source, { dto, id }, context) => {
+          const prisma = context as PrismaClient;
+          const userId = id as string;
+          const user = dto as {
+            name: string;
+            balance: number;
+          }
+
+          return await prisma.user.update({
+            where: { id: userId },
             data: user,
           });
         },
@@ -433,7 +534,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
   const schema = new GraphQLSchema({
     query: rootQuery,
     mutation: rootMutation,
-    types: [member, MemberTypeId, post, profile, user, CreatePostInput, CreateProfileInput, CreateUserInput],
+    types: [member, MemberTypeId, post, profile, user, CreatePostInput, CreateProfileInput, CreateUserInput, ChangeUserInput, ChangePostInput, ChangeProfileInput],
   });
 
   fastify.route({
