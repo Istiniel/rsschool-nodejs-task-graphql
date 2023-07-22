@@ -365,6 +365,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           });
         },
       },
+
       createUser: {
         type: user,
         args: { dto: { type: new GraphQLNonNull(CreateUserInput) } },
@@ -377,6 +378,52 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
           return await prisma.user.create({
             data: user,
+          });
+        },
+      },
+
+      deletePost: {
+        type: UUIDType,
+        args: { id: { type: UUIDType } },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const postId = id as string;
+
+          return await prisma.post.delete({
+            where: {
+              id: postId,
+            },
+          });
+        },
+      },
+
+      deleteProfile: {
+        type: UUIDType,
+        args: { id: { type: UUIDType } },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const profileId = id as string;
+          return await prisma.profile.delete({
+            where: {
+              id: profileId,
+            },
+          });
+        },
+      },
+
+      deleteUser: {
+        type: UUIDType,
+        args: {
+          id: { type: UUIDType }
+        },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const userId = id as string
+
+          return await prisma.user.delete({
+            where: {
+              id: userId,
+            },
           });
         },
       },
