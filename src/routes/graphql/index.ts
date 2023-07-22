@@ -13,6 +13,7 @@ import {
   validate,
   parse,
   GraphQLString,
+  GraphQLBoolean,
 } from 'graphql';
 import { PrismaClient } from '@prisma/client';
 import depthLimit from 'graphql-depth-limit';
@@ -75,6 +76,32 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }),
   });
 
+  const profile = new GraphQLObjectType({
+    name: 'profile',
+    fields: () => ({
+      id: {
+        type: UUIDType,
+        description: '',
+      },
+      isMale: {
+        type: GraphQLBoolean,
+        description: '',
+      },
+      yearOfBirth: {
+        type: GraphQLInt,
+        description: '',
+      },
+      userId: {
+        type: UUIDType,
+        description: '',
+      },
+      memberTypeId: {
+        type: MemberTypeId,
+        description: '',
+      },
+    }),
+  });
+
   const rootQuery = new GraphQLObjectType({
     name: 'rootQuery',
     fields: () => ({
@@ -116,12 +143,31 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           });
         },
       },
+      profiles: {
+        type: new GraphQLList(new GraphQLNonNull(profile)),
+        resolve: async () => {
+          return await prisma.profile.findMany();
+        },
+      },
+      profile: {
+        type: profile,
+        args: { id: { type: UUIDType } },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const idNumber = id as string;
+          return await prisma.profile.findUnique({
+            where: {
+              id: idNumber,
+            },
+          });
+        },
+      },
     }),
   });
 
   const schema = new GraphQLSchema({
     query: rootQuery,
-    types: [member, MemberTypeId, post],
+    types: [member, MemberTypeId, post, profile],
   });
 
   fastify.route({
