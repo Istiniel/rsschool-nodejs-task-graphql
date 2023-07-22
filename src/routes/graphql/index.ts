@@ -470,14 +470,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangeUserInput) } },
         resolve: async (_source, { dto, id }, context) => {
           const prisma = context as PrismaClient;
-          const userId = id as string;
           const user = dto as {
             name: string;
             balance: number;
           }
 
           return await prisma.user.update({
-            where: { id: userId },
+            where: { id: id as string },
             data: user,
           });
         },
@@ -488,11 +487,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         args: { id: { type: UUIDType } },
         resolve: async (_source, { id }, context) => {
           const prisma = context as PrismaClient;
-          const postId = id as string;
 
-          return await prisma.post.delete({
+          await prisma.post.delete({
             where: {
-              id: postId,
+              id: id as string,
             },
           });
         },
@@ -503,10 +501,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         args: { id: { type: UUIDType } },
         resolve: async (_source, { id }, context) => {
           const prisma = context as PrismaClient;
-          const profileId = id as string;
-          return await prisma.profile.delete({
+          await prisma.profile.delete({
             where: {
-              id: profileId,
+              id: id as string,
             },
           });
         },
@@ -519,11 +516,53 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         resolve: async (_source, { id }, context) => {
           const prisma = context as PrismaClient;
-          const userId = id as string
-
-          return await prisma.user.delete({
+          await prisma.user.delete({
             where: {
-              id: userId,
+              id: id as string,
+            },
+          });
+        },
+      },
+
+      subscribeTo: {
+        type: user,
+        args: {
+          userId: { type: UUIDType },
+          authorId: { type: UUIDType },
+        },
+        resolve: async (_source, { userId, authorId }, context) => {
+          const prisma = context as PrismaClient;
+
+          return await prisma.user.update({
+            where: {
+              id: userId as string,
+            },
+            data: {
+              userSubscribedTo: {
+                create: {
+                  authorId: authorId as string,
+                },
+              },
+            },
+          });
+        },
+      },
+
+      unsubscribeFrom: {
+        type: UUIDType,
+        args: {
+          userId: { type: UUIDType },
+          authorId: { type: UUIDType },
+        },
+        resolve: async (_source, { userId, authorId }, context) => {
+          const prisma = context as PrismaClient;
+
+          await prisma.subscribersOnAuthors.delete({
+            where: {
+              subscriberId_authorId: {
+                subscriberId: userId as string,
+                authorId: authorId as string,
+              },
             },
           });
         },
