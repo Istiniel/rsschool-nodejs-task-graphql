@@ -12,9 +12,11 @@ import {
   Source,
   validate,
   parse,
+  GraphQLString,
 } from 'graphql';
 import { PrismaClient } from '@prisma/client';
 import depthLimit from 'graphql-depth-limit';
+import { UUIDType } from './types/uuid.js';
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
   const { prisma } = fastify;
@@ -51,6 +53,28 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     }),
   });
 
+  const post = new GraphQLObjectType({
+    name: 'post',
+    fields: () => ({
+      id: {
+        type: UUIDType,
+        description: '',
+      },
+      title: {
+        type: GraphQLString,
+        description: '',
+      },
+      content: {
+        type: GraphQLString,
+        description: '',
+      },
+      authorId: {
+        type: UUIDType,
+        description: '',
+      },
+    }),
+  });
+
   const rootQuery = new GraphQLObjectType({
     name: 'rootQuery',
     fields: () => ({
@@ -73,12 +97,31 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           });
         },
       },
+      posts: {
+        type: new GraphQLList(new GraphQLNonNull(post)),
+        resolve: async () => {
+          return await prisma.post.findMany();
+        },
+      },
+      post: {
+        type: post,
+        args: { id: { type: UUIDType } },
+        resolve: async (_source, { id }, context) => {
+          const prisma = context as PrismaClient;
+          const idNumber = id as string;
+          return await prisma.post.findUnique({
+            where: {
+              id: idNumber,
+            },
+          });
+        },
+      },
     }),
   });
 
   const schema = new GraphQLSchema({
     query: rootQuery,
-    types: [member, MemberTypeId],
+    types: [member, MemberTypeId, post],
   });
 
   fastify.route({
