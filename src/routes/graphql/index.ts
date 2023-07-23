@@ -15,6 +15,7 @@ import {
   GraphQLString,
   GraphQLBoolean,
   GraphQLInputObjectType,
+  FieldNode,
 } from 'graphql';
 import { PrismaClient } from '@prisma/client';
 import depthLimit from 'graphql-depth-limit';
@@ -140,7 +141,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       profile: {
         type: profile,
         description: '',
-        resolve: async ({ id }) => {
+        resolve: async ({ id }, args, context, info) => {
           const userId = id as string;
           return await prisma.profile.findUnique({
             where: {
