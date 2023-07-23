@@ -19,6 +19,11 @@ import {
 import { PrismaClient } from '@prisma/client';
 import depthLimit from 'graphql-depth-limit';
 import { UUIDType } from './types/uuid.js';
+import {
+  parseResolveInfo,
+  simplifyParsedResolveInfoFragmentWithType
+} from 'graphql-parse-resolve-info';
+import DataLoader from 'dataloader'
 
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
   const { prisma } = fastify;
@@ -203,8 +208,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       memberType: {
         type: member,
         args: { id: { type: MemberTypeId } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           const idNumber = id as string;
           return await prisma.memberType.findUnique({
             where: {
@@ -222,8 +226,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       post: {
         type: post,
         args: { id: { type: UUIDType } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           const idNumber = id as string;
           return await prisma.post.findUnique({
             where: {
@@ -241,8 +244,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       profile: {
         type: profile,
         args: { id: { type: UUIDType } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           const idNumber = id as string;
           return await prisma.profile.findUnique({
             where: {
@@ -260,8 +262,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       user: {
         type: user,
         args: { id: { type: UUIDType } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           const idNumber = id as string;
           return await prisma.user.findUnique({
             where: {
@@ -380,8 +381,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       createPost: {
         type: post,
         args: { dto: { type: new GraphQLNonNull(CreatePostInput) } },
-        resolve: async (_source, { dto }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { dto }) => {
 
           const post = dto as {
             title: string;
@@ -398,8 +398,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       createProfile: {
         type: profile,
         args: { dto: { type: new GraphQLNonNull(CreateProfileInput) } },
-        resolve: async (_source, { dto }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { dto }) => {
           const profile = dto as {
             isMale: boolean;
             yearOfBirth: number;
@@ -415,8 +414,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       createUser: {
         type: user,
         args: { dto: { type: new GraphQLNonNull(CreateUserInput) } },
-        resolve: async (_source, { dto }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { dto }) => {
           const user = dto as {
             name: string;
             balance: number;
@@ -431,8 +429,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       changePost: {
         type: post,
         args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangePostInput) } },
-        resolve: async (_source, { id, dto }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id, dto }) => {
 
           const postId = id as string;
           const post = dto as {
@@ -450,8 +447,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       changeProfile: {
         type: profile,
         args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangeProfileInput) } },
-        resolve: async (_source, { id, dto }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id, dto }) => {
           const profileId = id as string;
           const profile = dto as {
             isMale: boolean;
@@ -468,8 +464,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       changeUser: {
         type: user,
         args: { id: { type: UUIDType }, dto: { type: new GraphQLNonNull(ChangeUserInput) } },
-        resolve: async (_source, { dto, id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { dto, id }) => {
           const user = dto as {
             name: string;
             balance: number;
@@ -485,8 +480,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       deletePost: {
         type: UUIDType,
         args: { id: { type: UUIDType } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
 
           await prisma.post.delete({
             where: {
@@ -499,8 +493,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
       deleteProfile: {
         type: UUIDType,
         args: { id: { type: UUIDType } },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           await prisma.profile.delete({
             where: {
               id: id as string,
@@ -514,8 +507,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         args: {
           id: { type: UUIDType }
         },
-        resolve: async (_source, { id }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { id }) => {
           await prisma.user.delete({
             where: {
               id: id as string,
@@ -530,8 +522,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           userId: { type: UUIDType },
           authorId: { type: UUIDType },
         },
-        resolve: async (_source, { userId, authorId }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { userId, authorId }) => {
 
           return await prisma.user.update({
             where: {
@@ -554,8 +545,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
           userId: { type: UUIDType },
           authorId: { type: UUIDType },
         },
-        resolve: async (_source, { userId, authorId }, context) => {
-          const prisma = context as PrismaClient;
+        resolve: async (_source, { userId, authorId }) => {
 
           await prisma.subscribersOnAuthors.delete({
             where: {
@@ -598,7 +588,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         schema,
         source,
         variableValues: variables,
-        contextValue: prisma,
+        contextValue: { prisma, dataloaders: new WeakMap() },
+
       });
     },
   });
